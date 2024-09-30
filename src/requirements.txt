@@ -1,0 +1,7 @@
+certifi
+charset-normalizer
+idna
+PySide2
+requests
+shiboken2
+urllib3

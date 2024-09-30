@@ -23,10 +23,11 @@ class MixamoDownloaderUI(QtWidgets.QMainWindow):
     Note that only the T-Pose is downloaded with skin. Animations are
     downloaded without skin to speed things up and save space on disk.
     """
-    def __init__(self):        
+
+    def __init__(self):
         """Initialize the Mixamo Downloader UI."""
         super().__init__()
-        
+
         # Set the window title and size.
         self.setWindowTitle('Mixamo')
         self.setGeometry(100, 100, 1200, 800)
@@ -41,7 +42,7 @@ class MixamoDownloaderUI(QtWidgets.QMainWindow):
         page.setUrl((QtCore.QUrl('https://www.mixamo.com')))
         # Apply this page to the web browser.
         self.browser.setPage(page)
-        
+
         # The access token will be sent from the custom QWebEnginePage
         # through a signal, so we need to connect that signal to some
         # method in this class in order to get its value.
@@ -83,12 +84,14 @@ class MixamoDownloaderUI(QtWidgets.QMainWindow):
         self.rb_query.toggled.connect(lambda: self.le_query.setEnabled(True))
         self.rb_all.toggled.connect(lambda: self.le_query.setEnabled(False))
         self.rb_tpose.toggled.connect(lambda: self.le_query.setEnabled(False))
+        self.rewrite_btn = QtWidgets.QCheckBox("Rewrite existing files")
 
         # Add the radio buttons and line edit to the download options layout.
         anim_opt_lyt.addWidget(self.rb_all)
         anim_opt_lyt.addWidget(self.rb_query)
         anim_opt_lyt.addWidget(self.le_query)
         anim_opt_lyt.addWidget(self.rb_tpose)
+        anim_opt_lyt.addWidget(self.rewrite_btn)
 
         # Add another horizontal layout to the footer.
         # This layout will contain the Output Folder group box.
@@ -143,9 +146,9 @@ class MixamoDownloaderUI(QtWidgets.QMainWindow):
         # It will be disabled by default, and enabled only when downloading.
         self.stop_btn = QtWidgets.QPushButton("Stop")
         self.stop_btn.setEnabled(False)
-        self.stop_btn.clicked.connect(self.stop_download)        
-        prog_lyt.addWidget(self.stop_btn)        
-        
+        self.stop_btn.clicked.connect(self.stop_download)
+        prog_lyt.addWidget(self.stop_btn)
+
         # Set this widget as the central one for the Main Window.
         self.setCentralWidget(central_widget)
 
@@ -164,7 +167,7 @@ class MixamoDownloaderUI(QtWidgets.QMainWindow):
         var token = localStorage.getItem('access_token');
         console.log('ACCESS TOKEN:', token);
         """
-        
+
         # Run the JavaScript code on our page.
         self.browser.page().runJavaScript(script)
 
@@ -195,9 +198,10 @@ class MixamoDownloaderUI(QtWidgets.QMainWindow):
         mode = self.get_mode()
         query = self.le_query.text()
         path = self.le_path.text()
+        rewrite = self.rewrite_btn.isChecked()
 
         # Create a MixamoDownloader instance and move it to the new thread.
-        self.worker = MixamoDownloader(path, mode, query)
+        self.worker = MixamoDownloader(path, mode, rewrite, query)
         self.worker.moveToThread(self.thread)
 
         # As soon as the thread is started, the run method on the worker
@@ -207,6 +211,8 @@ class MixamoDownloaderUI(QtWidgets.QMainWindow):
         self.thread.started.connect(self.stop_btn.setEnabled(True))
         # The 'Download' button will be disabled.
         self.thread.started.connect(self.get_btn.setEnabled(False))
+        # The 'Rewrite' checkbox will be disabled.
+        self.thread.started.connect(lambda: self.rewrite_btn.setEnabled(False))
 
         # When the worker emits the finished signal, close the thread.
         self.worker.finished.connect(self.thread.quit)
@@ -261,7 +267,7 @@ class MixamoDownloaderUI(QtWidgets.QMainWindow):
         """Ask the user to select the output folder through a QFileDialog."""
         path = QtWidgets.QFileDialog.getExistingDirectory(
             self, 'Select the output folder')
-        
+
         # If a folder has been selected by the user, update the line edit.
         if path:
             self.le_path.setText(path)
